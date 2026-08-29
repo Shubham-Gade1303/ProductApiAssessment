@@ -1,8 +1,8 @@
 using Application.DTOs;
 using Application.DTOs.Products;
 using Application.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers;
 
@@ -17,6 +17,11 @@ public class ProductController : ControllerBase
     {
         _productService = productService;
     }
+
+    // =====================================================
+    // GET ALL PRODUCTS
+    // User + Admin
+    // =====================================================
 
     /// <summary>
     /// Gets a paginated list of products.
@@ -56,6 +61,11 @@ public class ProductController : ControllerBase
         return Ok(result);
     }
 
+    // =====================================================
+    // GET PRODUCT BY ID
+    // User + Admin
+    // =====================================================
+
     /// <summary>
     /// Gets a product by ID.
     /// </summary>
@@ -84,22 +94,29 @@ public class ProductController : ControllerBase
         return Ok(product);
     }
 
+    // =====================================================
+    // CREATE PRODUCT
+    // Admin Only
+    // =====================================================
+
     /// <summary>
     /// Creates a new product.
     /// </summary>
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(
         typeof(ProductResponse),
         StatusCodes.Status201Created)]
     [ProducesResponseType(
         StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ProductResponse>> Create(
         [FromBody] CreateProductRequest request,
         CancellationToken cancellationToken)
     {
-        // Temporary value.
-        // JWT authentication will replace this later.
-        const string createdBy = "system";
+        var createdBy =
+            User.Identity?.Name ?? "system";
 
         var product = await _productService.CreateAsync(
             request,
@@ -112,14 +129,22 @@ public class ProductController : ControllerBase
             product);
     }
 
+    // =====================================================
+    // UPDATE PRODUCT
+    // Admin Only
+    // =====================================================
+
     /// <summary>
     /// Updates an existing product.
     /// </summary>
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(
         StatusCodes.Status204NoContent)]
     [ProducesResponseType(
         StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden)]
     [ProducesResponseType(
         StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
@@ -127,9 +152,8 @@ public class ProductController : ControllerBase
         [FromBody] UpdateProductRequest request,
         CancellationToken cancellationToken)
     {
-        // Temporary value.
-        // JWT authentication will replace this later.
-        const string modifiedBy = "system";
+        var modifiedBy =
+            User.Identity?.Name ?? "system";
 
         await _productService.UpdateAsync(
             id,
@@ -140,12 +164,20 @@ public class ProductController : ControllerBase
         return NoContent();
     }
 
+    // =====================================================
+    // DELETE PRODUCT
+    // Admin Only
+    // =====================================================
+
     /// <summary>
     /// Deletes a product.
     /// </summary>
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(
         StatusCodes.Status204NoContent)]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden)]
     [ProducesResponseType(
         StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(

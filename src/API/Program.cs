@@ -71,6 +71,32 @@ builder.Services
 builder.Services.AddControllers();
 
 // =====================================================
+// Response Compression
+// =====================================================
+
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
+// =====================================================
+// CORS
+// =====================================================
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "DefaultCorsPolicy",
+        policy =>
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
+// =====================================================
 // Entity Framework Core + SQL Server
 // =====================================================
 
@@ -194,8 +220,7 @@ var app = builder.Build();
 // Global Exception Handling Middleware
 // =====================================================
 
-app.UseMiddleware<
-    ExceptionHandlingMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // =====================================================
 // Swagger
@@ -209,10 +234,40 @@ if (app.Environment.IsDevelopment())
 }
 
 // =====================================================
+// Response Compression
+// =====================================================
+
+app.UseResponseCompression();
+
+// =====================================================
+// CORS
+// =====================================================
+
+app.UseCors("DefaultCorsPolicy");
+
+// =====================================================
 // HTTPS
 // =====================================================
 
 app.UseHttpsRedirection();
+
+// =====================================================
+// Security Headers
+// =====================================================
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] =
+        "nosniff";
+
+    context.Response.Headers["X-Frame-Options"] =
+        "DENY";
+
+    context.Response.Headers["Referrer-Policy"] =
+        "no-referrer";
+
+    await next();
+});
 
 // =====================================================
 // Authentication & Authorization
@@ -229,7 +284,27 @@ app.UseAuthorization();
 app.MapControllers();
 
 // =====================================================
+// Apply EF Core Migrations
+// =====================================================
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider
+        .GetRequiredService<ApplicationDbContext>();
+
+    dbContext.Database.Migrate();
+}
+
+// =====================================================
 // Run
 // =====================================================
 
 app.Run();
+
+// =====================================================
+// Required for WebApplicationFactory integration tests
+// =====================================================
+
+public partial class Program
+{
+}
